@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState ,useMemo} from "react";
 import { Line } from "react-chartjs-2";
 import {
   Box,
@@ -239,164 +239,166 @@ const rentData = rentArray;
      
     })
 
+//   for (let i = 1; i < rentArr.length; i++) {
+//     const prevDiff = rentArr[i - 1] - buyArr[i - 1];
+//     const currentDiff = rentArr[i] - buyArr[i];
 
-   
+//     // Check for actual line crossing
+//     if ((prevDiff < 0 && currentDiff > 0) || (prevDiff > 0 && currentDiff < 0)) {
+//       const slopeRent = rentArr[i] - rentArr[i - 1];
+//       const slopeBuy = buyArr[i] - buyArr[i - 1];
+//       const slopeDifference = slopeRent - slopeBuy;
+//       const t = (buyArr[i - 1] - rentArr[i - 1]) / slopeDifference;
+//       const x = i - 1 + t;
+//       const y = rentArr[i - 1] + slopeRent * t;
+//       return { x, y };
+//     }
 
-  const getIntersection = () => {
-    for (let i = 1; i < rentData.length; i++) {
-      const prevRent = rentData[i - 1];
-      const prevBuy = buyData[i - 1];
-      const currentRent = rentData[i];
-      const currentBuy = buyData[i];
+//     // If no crossover but divergence starts
+//     if (currentDiff > 0 && prevDiff <= 0) {
+//       // Apply your formula: i + (Buy - Rent) / Rent
+//       const mappedX = i + (buyArr[i] - rentArr[i]) / rentArr[i];
+//       return {
+//         x: mappedX,
+//         y: rentArr[i],
+//       };
+//     }
+//   }
 
-      // Check if the lines cross between two consecutive points
-      if (
-        (prevRent < prevBuy && currentRent > currentBuy) ||
-        (prevRent > prevBuy && currentRent < currentBuy)
-      ) {
-        // Calculate the intersection point using linear interpolation
-        const slopeRent = currentRent - prevRent;
-        const slopeBuy = currentBuy - prevBuy;
-        const slopeDifference = slopeRent - slopeBuy;
+//   // No crossover or divergence
+//   return null;
+// };
+// const getIntersection = (rentArr, buyArr) => {
+//   for (let i = 1; i < rentArr.length; i++) {
+//     if (rentArr[i] > 0 && buyArr[i] > rentArr[i]) {
+//       const x = i + (buyArr[i] - rentArr[i]) / rentArr[i];
+//       const y = rentArr[i];
+//       return { x, y };
+//     }
+//   }
+//   return null;
+// };
 
-        // Calculate how far along the interval the lines intersect
-        const t = (prevBuy - prevRent) / slopeDifference;
-        const x = parseFloat((i - 1 + t).toFixed(2)); // The exact x-coordinate of the intersection
-        const y = parseFloat((prevRent + slopeRent * t).toFixed(2)); // The exact y-coordinate of the intersection
+const getIntersection = (rentArr, buyArr) => {
+  for (let i = 1; i < rentArr.length; i++) {
+    const prevRent = rentArr[i - 1];
+    const prevBuy = buyArr[i - 1];
+    const currentRent = rentArr[i];
+    const currentBuy = buyArr[i];
 
+    const prevDiff = prevRent - prevBuy;
+    const currDiff = currentRent - currentBuy;
 
-        return { x, y };
-      }
+    // Detect when rent and buy lines cross
+    if ((prevDiff < 0 && currDiff > 0) || (prevDiff > 0 && currDiff < 0)) {
+      const slopeRent = currentRent - prevRent;
+      const slopeBuy = currentBuy - prevBuy;
+      const slopeDiff = slopeRent - slopeBuy;
+
+      const t = (prevBuy - prevRent) / slopeDiff; // 0 < t < 1
+      const x = (i - 1) + t;
+      const y = prevRent + slopeRent * t;
+
+      return { x, y };
     }
-    return null;
+  }
+
+  return null; // No intersection found
+};
+
+
+const intersectionPoint = useMemo(
+  () => getIntersection(yearlyRentCosts, yearlyBuyCosts),
+  [yearlyRentCosts, yearlyBuyCosts]
+);
+
+ // Optional: Add polyfill for roundRect if not supported
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+    if (w < 2 * r) r = w / 2;
+    if (h < 2 * r) r = h / 2;
+    this.beginPath();
+    this.moveTo(x + r, y);
+    this.arcTo(x + w, y, x + w, y + h, r);
+    this.arcTo(x + w, y + h, x, y + h, r);
+    this.arcTo(x, y + h, x, y, r);
+    this.arcTo(x, y, x + w, y, r);
+    this.closePath();
+    return this;
   };
+}
 
-  const intersectionPoint = getIntersection();
-
-  const intersectionPlugin = {
-  className: "chart-container",
+const intersectionPlugin = {
   id: "intersectionCircle",
   afterDatasetsDraw(chart) {
-    const { ctx, scales, chartArea } = chart;
+    const { ctx, scales } = chart;
     const isMobile = window.innerWidth < 600;
 
-    // Draw intersection dot if intersectionPoint exists
-    if (intersectionPoint) {
-      const xCoord = scales.x.getPixelForValue(intersectionPoint.x);
-      const yCoord = scales.y.getPixelForValue(intersectionPoint.y);
+    if (!intersectionPoint) return;
 
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(xCoord, yCoord, isMobile ? 6 : 8, 0, 2 * Math.PI);
-      ctx.fillStyle = "#d32f2f";
-      ctx.strokeStyle = "#fff";
-      ctx.lineWidth = 2;
-      ctx.fill();
-      ctx.stroke();
-      ctx.restore();
+    const xCoord = scales.x.getPixelForValue(intersectionPoint.x);
+    const yCoord = scales.y.getPixelForValue(intersectionPoint.y);
 
-      // Optional: Draw a label near the dot
-      ctx.save();
-      ctx.font = `${isMobile ? 10 : 12}px Poppins, Arial, sans-serif`;
-      ctx.fillStyle = "#d32f2f";
-      ctx.textAlign = "left";
-      ctx.fillText(
-        `Break-even: Year ${intersectionPoint.x.toFixed(1)}`,
-        xCoord + 10,
-        yCoord - 10
-      );
-      ctx.restore();
-    }
+    // === Draw outer white circle ===
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(xCoord, yCoord, isMobile ? 10 : 12, 0, 2 * Math.PI);
+    ctx.fillStyle = "#DFDFDF"; // Outer white
+    ctx.fill();
+    ctx.restore();
 
-    // Draw annotation box for saturationYear as before
-    if (saturationYear < yearlyRentCosts.length) {
-      const xCoord = scales.x.getPixelForValue(saturationYear);
-      const yCoord = scales.y.getPixelForValue(yearlyRentCosts[saturationYear]);
+    // === Draw inner gray circle ===
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(xCoord, yCoord, isMobile ? 6 : 8, 0, 2 * Math.PI);
+    ctx.fillStyle = "#FFFFFF"; // Inner circle
+    ctx.fill();
+    ctx.restore();
 
-      const fontSize = isMobile ? 10 : 12;
-      const fontFamily = "Poppins, Arial, sans-serif";
-      const maxTextWidth = isMobile ? 100 : 150;
-      const padding = isMobile ? 8 : 10;
-      const lineHeight = isMobile ? 14 : 16;
-      const xOffset = isMobile ? 50 : 100;
+    // === Draw annotation box above ===
+    const fontSize = isMobile ? 10 : 14;
+    const padding = isMobile ? 8 : 14;
+    const lineHeight = fontSize + 4;
+    const textLines = [
+      "If you wish to stay in",
+      `this house for more`,
+      `than ${Math.round(intersectionPoint.x)} years,`,
+      "Buying is more profitable.",
+    ];
 
-      const text = `If you wish to stay in this house for more than ${saturationYear.toFixed(
-        1
-      )} years, Buying is more profitable.`;
+    ctx.font = `bold ${fontSize}px Poppins, sans-serif`;
+    const textWidths = textLines.map(line => ctx.measureText(line).width);
+    const maxWidth = Math.max(...textWidths);
+    const boxWidth = maxWidth + padding * 2;
+    const boxHeight = lineHeight * textLines.length + padding * 2;
+    const boxX = xCoord - boxWidth / 2;
+    const boxY = yCoord - boxHeight - 20;
 
-      // Text wrapping function
-      function wrapText(ctx, text, maxWidth) {
-        ctx.font = `bold ${fontSize}px ${fontFamily}`;
-        const words = text.split(" ");
-        let line = "";
-        const lines = [];
+    // Draw rounded box with shadow
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(boxX, boxY, boxWidth, boxHeight, 14);
+    ctx.fillStyle = "#ffffff";
+    ctx.shadowColor = "rgba(0, 0, 0, 0.1)";
+    ctx.shadowBlur = 10;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 4;
+    ctx.fill();
+    ctx.restore();
 
-        for (let n = 0; n < words.length; n++) {
-          const testLine = line + words[n] + " ";
-          const metrics = ctx.measureText(testLine);
+    // Draw centered bold text
+    ctx.save();
+    ctx.fillStyle = "#000000";
+    ctx.font = `bold ${fontSize}px Poppins, sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
 
-          if (metrics.width > maxWidth && n > 0) {
-            lines.push(line);
-            line = words[n] + " ";
-          } else {
-            line = testLine;
-          }
-        }
-        lines.push(line.trim());
-        return lines;
-      }
-
-      const lines = wrapText(ctx, text, maxTextWidth);
-      const boxWidth = Math.min(
-        maxTextWidth + padding * 2,
-        chartArea.right - xCoord - 10
-      );
-      const boxHeight = lines.length * lineHeight + padding * 2;
-
-      const boxX = Math.min(
-        xCoord + xOffset,
-        chartArea.right - boxWidth / 2 - 10
-      );
-      const boxY = yCoord - boxHeight - (isMobile ? 20 : 30);
-
-      ctx.save();
-
-      if (isMobile) {
-        ctx.beginPath();
-        ctx.roundRect(boxX - boxWidth / 2, boxY, boxWidth, boxHeight, 8);
-      } else {
-        ctx.beginPath();
-        ctx.moveTo(boxX - boxWidth / 2, boxY);
-        // ... (your existing fancy box path code if any)
-        ctx.lineTo(boxX + boxWidth / 2, boxY);
-        ctx.lineTo(boxX + boxWidth / 2, boxY + boxHeight);
-        ctx.lineTo(boxX - boxWidth / 2, boxY + boxHeight);
-        ctx.closePath();
-      }
-
-      ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
-      ctx.fill();
-
-      if (!isMobile) {
-        ctx.shadowColor = "rgba(0, 0, 0, 0.2)";
-        ctx.shadowBlur = 15;
-        ctx.shadowOffsetX = 5;
-        ctx.shadowOffsetY = 5;
-      }
-
-      ctx.fillStyle = "black";
-      ctx.font = `bold ${fontSize}px ${fontFamily}`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "top";
-
-      let textY = boxY + padding;
-      lines.forEach((line) => {
-        ctx.fillText(line, boxX, textY);
-        textY += lineHeight;
-      });
-
-      ctx.restore();
-    }
+    let textY = boxY + padding;
+    textLines.forEach((line) => {
+      ctx.fillText(line, xCoord, textY);
+      textY += lineHeight;
+    });
+    ctx.restore();
   },
 };
 
