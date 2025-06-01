@@ -50,7 +50,7 @@ ChartJS.register(
 
 const generateYearLabels = (years) => {
   const arr = [];
-  for (let i = 0; i <= years; i++) {
+  for (let i = 1; i <= years; i++) {
     arr.push(i); // Add years from 0 to 10
   }
   return arr;
@@ -99,6 +99,10 @@ const [yearlyRentCosts, setYearlyRentCosts] = useState([]);
   const [error, setError] = useState(null); // State to handle any errors
   const [loading, setLoading] = useState(false); // State to handle loading
   const [debounceTimer, setDebounceTimer] = useState(null);
+  const [yearlyCostVersion, setYearlyCostVersion] = useState(0);
+  const [intersectionPoint, setIntersectionPoint] = useState(null);
+
+
 
   const triggerDebouncedApiCall = () => {
     if (debounceTimer) {
@@ -300,17 +304,17 @@ const getIntersection = (rentArr, buyArr) => {
       const y = prevRent + slopeRent * t;
 
       return { x, y };
+ 
     }
   }
 
   return null; // No intersection found
 };
-
-
-const intersectionPoint = useMemo(
-  () => getIntersection(yearlyRentCosts, yearlyBuyCosts),
-  [yearlyRentCosts, yearlyBuyCosts]
-);
+console.log("getIntersection", getIntersection(yearlyRentCosts, yearlyBuyCosts));
+// const intersectionPoint = useMemo(
+//   () => getIntersection(yearlyRentCosts, yearlyBuyCosts),
+//   [yearlyRentCosts, yearlyBuyCosts, yearlyCostVersion]
+// );
 
  // Optional: Add polyfill for roundRect if not supported
 if (!CanvasRenderingContext2D.prototype.roundRect) {
@@ -334,24 +338,32 @@ const intersectionPlugin = {
     const { ctx, scales } = chart;
     const isMobile = window.innerWidth < 600;
 
-    if (!intersectionPoint) return;
+   if (
+      !intersectionPoint ||
+      !Array.isArray(yearlyRentCosts) ||
+      !Array.isArray(yearlyBuyCosts) ||
+      yearlyRentCosts.length < 2 ||
+      yearlyBuyCosts.length < 2
+    ) {
+      return;
+    }
 
     const xCoord = scales.x.getPixelForValue(intersectionPoint.x);
     const yCoord = scales.y.getPixelForValue(intersectionPoint.y);
 
-    // === Draw outer white circle ===
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(xCoord, yCoord, isMobile ? 10 : 12, 0, 2 * Math.PI);
-    ctx.fillStyle = "#DFDFDF"; // Outer white
-    ctx.fill();
-    ctx.restore();
+    // // === Draw outer white circle ===
+    // ctx.save();
+    // ctx.beginPath();
+    // ctx.arc(xCoord, yCoord, isMobile ? 10 : 12, 0, 2 * Math.PI);
+    // ctx.fillStyle = "#DFDFDF"; // Outer white
+    // ctx.fill();
+    // ctx.restore();
 
     // === Draw inner gray circle ===
     ctx.save();
     ctx.beginPath();
     ctx.arc(xCoord, yCoord, isMobile ? 6 : 8, 0, 2 * Math.PI);
-    ctx.fillStyle = "#FFFFFF"; // Inner circle
+    ctx.fillStyle = "#DFDFDF"; // Inner circle
     ctx.fill();
     ctx.restore();
 
@@ -723,7 +735,7 @@ const saveYearlyCostsToLocalStorage = () => {
 
   localStorage.setItem("buyingCosts", JSON.stringify(yearly.cumulativeBuyCosts));
   localStorage.setItem("rentingCosts", JSON.stringify(yearly.cumulativeRentCosts));
-  setYearlyBuyCosts(yearly.cumulativeBuyCosts);
+
 
   const rentArr = yearly.cumulativeRentCosts;
   const buyArr = yearly.cumulativeBuyCosts;
@@ -742,7 +754,12 @@ const saveYearlyCostsToLocalStorage = () => {
     }
   }
   setSaturationYear(saturation);
-  setYearlyRentCosts(yearly.cumulativeRentCosts);
+setYearlyBuyCosts([...yearly.cumulativeBuyCosts]);
+setYearlyRentCosts([...yearly.cumulativeRentCosts]);
+setIntersectionPoint(getIntersection(yearly.cumulativeRentCosts, yearly.cumulativeBuyCosts));
+setYearlyCostVersion(prev => prev + 1);
+            // Bump version to trigger memo
+
 };
 
 
