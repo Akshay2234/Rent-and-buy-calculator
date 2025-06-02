@@ -282,34 +282,35 @@ const rentData = rentArray;
 //   }
 //   return null;
 // };
-
 const getIntersection = (rentArr, buyArr) => {
-  for (let i = 1; i < rentArr.length; i++) {
-    const prevRent = rentArr[i - 1];
-    const prevBuy = buyArr[i - 1];
-    const currentRent = rentArr[i];
-    const currentBuy = buyArr[i];
-
-    const prevDiff = prevRent - prevBuy;
-    const currDiff = currentRent - currentBuy;
-
-    // Detect when rent and buy lines cross
-    if ((prevDiff < 0 && currDiff > 0) || (prevDiff > 0 && currDiff < 0)) {
-      const slopeRent = currentRent - prevRent;
-      const slopeBuy = currentBuy - prevBuy;
-      const slopeDiff = slopeRent - slopeBuy;
-
-      const t = (prevBuy - prevRent) / slopeDiff; // 0 < t < 1
-      const x = (i - 1) + t;
-      const y = prevRent + slopeRent * t;
-
-      return { x, y };
- 
-    }
+  if (!rentArr || !buyArr || rentArr.length !== buyArr.length || rentArr.length < 2) {
+    console.warn("Invalid or insufficient data for intersection calculation", { rentArr, buyArr });
+    return null;
   }
 
-  return null; // No intersection found
+  console.debug("getIntersection inputs:", { rentArr, buyArr });
+  let prevDiff = rentArr[0] - buyArr[0];
+  for (let i = 1; i < rentArr.length; i++) {
+    const currDiff = rentArr[i] - buyArr[i];
+    console.debug(`Year ${i}: rent=${rentArr[i]}, buy=${buyArr[i]}, diff=${currDiff}`);
+    if (prevDiff * currDiff <= 0 && Math.abs(prevDiff) > 0) {
+      const slopeRent = rentArr[i] - rentArr[i - 1];
+      const slopeBuy = buyArr[i] - buyArr[i - 1];
+      const slopeDiff = slopeRent - slopeBuy || 1e-8;
+      const t = (buyArr[i - 1] - rentArr[i - 1]) / slopeDiff;
+      const x = i - 1 + t;
+      const y = rentArr[i - 1] + slopeRent * t;
+      if (x >= 0 && x <= rentArr.length - 1) {
+        console.debug(`Intersection found at year=${x.toFixed(2)}, cost=${y.toFixed(2)}`);
+        return { x, y };
+      }
+    }
+    prevDiff = currDiff;
+  }
+  console.warn("No valid intersection found");
+  return null;
 };
+
 console.log("getIntersection", getIntersection(yearlyRentCosts, yearlyBuyCosts));
 // const intersectionPoint = useMemo(
 //   () => getIntersection(yearlyRentCosts, yearlyBuyCosts),
@@ -331,14 +332,13 @@ if (!CanvasRenderingContext2D.prototype.roundRect) {
     return this;
   };
 }
-
 const intersectionPlugin = {
   id: "intersectionCircle",
   afterDatasetsDraw(chart) {
     const { ctx, scales } = chart;
     const isMobile = window.innerWidth < 600;
 
-   if (
+    if (
       !intersectionPoint ||
       !Array.isArray(yearlyRentCosts) ||
       !Array.isArray(yearlyBuyCosts) ||
@@ -348,32 +348,29 @@ const intersectionPlugin = {
       return;
     }
 
+    // ⛔️ Skip annotation if intersection is too early to be meaningful
+    if (intersectionPoint.x < 1.5) {
+      return;
+    }
+
     const xCoord = scales.x.getPixelForValue(intersectionPoint.x);
     const yCoord = scales.y.getPixelForValue(intersectionPoint.y);
 
-    // // === Draw outer white circle ===
-    // ctx.save();
-    // ctx.beginPath();
-    // ctx.arc(xCoord, yCoord, isMobile ? 10 : 12, 0, 2 * Math.PI);
-    // ctx.fillStyle = "#DFDFDF"; // Outer white
-    // ctx.fill();
-    // ctx.restore();
-
-    // === Draw inner gray circle ===
+    // === Draw inner circle at intersection ===
     ctx.save();
     ctx.beginPath();
     ctx.arc(xCoord, yCoord, isMobile ? 6 : 8, 0, 2 * Math.PI);
-    ctx.fillStyle = "#DFDFDF"; // Inner circle
+    ctx.fillStyle = "#DFDFDF";
     ctx.fill();
     ctx.restore();
 
-    // === Draw annotation box above ===
+    // === Draw annotation box above intersection ===
     const fontSize = isMobile ? 10 : 14;
     const padding = isMobile ? 8 : 14;
     const lineHeight = fontSize + 4;
     const textLines = [
       "If you wish to stay in",
-      `this house for more`,
+      "this house for more",
       `than ${Math.round(intersectionPoint.x)} years,`,
       "Buying is more profitable.",
     ];
@@ -386,7 +383,7 @@ const intersectionPlugin = {
     const boxX = xCoord - boxWidth / 2;
     const boxY = yCoord - boxHeight - 20;
 
-    // Draw rounded box with shadow
+    // Draw rounded annotation box
     ctx.save();
     ctx.beginPath();
     ctx.roundRect(boxX, boxY, boxWidth, boxHeight, 14);
@@ -398,7 +395,7 @@ const intersectionPlugin = {
     ctx.fill();
     ctx.restore();
 
-    // Draw centered bold text
+    // Draw annotation text
     ctx.save();
     ctx.fillStyle = "#000000";
     ctx.font = `bold ${fontSize}px Poppins, sans-serif`;
@@ -413,6 +410,7 @@ const intersectionPlugin = {
     ctx.restore();
   },
 };
+
 
   const data = {
     labels: generateYearLabels(loan_tenure),
@@ -707,6 +705,7 @@ cumulativeNetBuyArr.push(cumulativeBuy);
 
 //  const xx = getSaturationYear(cumulativeNetBuyArr, cumulativeNetRentArr);
 
+
 const saveYearlyCostsToLocalStorage = () => {
   const yearly = calculateYearlyCosts({
     house_cost,
@@ -727,40 +726,39 @@ const saveYearlyCostsToLocalStorage = () => {
     tax_Bracket,
   });
 
-  // Log cumulative values for each year
-  yearly.cumulativeRentCosts.forEach((rent, i) => {
-    const buy = yearly.cumulativeBuyCosts[i];
+  const rentArr = [...yearly.cumulativeRentCosts];
+  const buyArr = [...yearly.cumulativeBuyCosts];
 
-  });
+  localStorage.setItem("buyingCosts", JSON.stringify(buyArr));
+  localStorage.setItem("rentingCosts", JSON.stringify(rentArr));
 
-  localStorage.setItem("buyingCosts", JSON.stringify(yearly.cumulativeBuyCosts));
-  localStorage.setItem("rentingCosts", JSON.stringify(yearly.cumulativeRentCosts));
-
-
-  const rentArr = yearly.cumulativeRentCosts;
-  const buyArr = yearly.cumulativeBuyCosts;
   let saturation = buyArr.length - 1;
-
-  // Create difference array: buyArr - rentArr
-  const differenceArr = buyArr.map((buy, i) => buy - rentArr[i]);
-  // You can log or set this array to state if needed
- 
-
   for (let i = 1; i < rentArr.length; i++) {
-    // Find the first year where buying cumulative cost becomes less than renting
     if (buyArr[i] < rentArr[i]) {
-      saturation = i ;
+      saturation = i;
+      console.log("Saturation Year:", saturation);
       break;
     }
   }
-  setSaturationYear(saturation);
-setYearlyBuyCosts([...yearly.cumulativeBuyCosts]);
-setYearlyRentCosts([...yearly.cumulativeRentCosts]);
-setIntersectionPoint(getIntersection(yearly.cumulativeRentCosts, yearly.cumulativeBuyCosts));
-setYearlyCostVersion(prev => prev + 1);
-            // Bump version to trigger memo
 
+  // ✅ NEW: Calculate and log difference array (Buy - Rent)
+  const differenceArray = buyArr.map((buyCost, index) => {
+    const rentCost = rentArr[index] || 0;
+    return buyCost - rentCost;
+  });
+  console.log("Year-wise Difference (Buy - Rent):", differenceArray);
+
+  // Update state
+  setYearlyBuyCosts(buyArr);
+  setYearlyRentCosts(rentArr);
+  setSaturationYear(saturation);
+
+  const intersection = getIntersection(rentArr, buyArr);
+  setIntersectionPoint(intersection);
+
+  setYearlyCostVersion(prev => prev + 1); // Trigger re-render if needed
 };
+
 
 
 // Example: call after any slider/input change
