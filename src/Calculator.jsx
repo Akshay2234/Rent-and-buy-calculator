@@ -101,6 +101,7 @@ const [yearlyRentCosts, setYearlyRentCosts] = useState([]);
   const [debounceTimer, setDebounceTimer] = useState(null);
   const [yearlyCostVersion, setYearlyCostVersion] = useState(0);
   const [intersectionPoint, setIntersectionPoint] = useState(null);
+const [chartRenderKey, setChartRenderKey] = useState(0);
 
 
 
@@ -358,7 +359,7 @@ const intersectionPlugin = {
     // === Draw inner circle at intersection ===
     ctx.save();
     ctx.beginPath();
-    ctx.arc(xCoord, yCoord, isMobile ? 6 : 8, 0, 2 * Math.PI);
+    ctx.arc(Math.round(xCoord), Math.round(yCoord), isMobile ? 6 : 8, 0, 2 * Math.PI);
     ctx.fillStyle = "#DFDFDF";
     ctx.fill();
     ctx.restore();
@@ -462,6 +463,7 @@ const intersectionPlugin = {
 const yAxisMax = Math.ceil(maxYValue / 1e6) * 1e6;
 
   const options = {
+  devicePixelRatio: window.devicePixelRatio || 2,
     responsive: true,
     maintainAspectRatio: false,
     layout: {
@@ -797,6 +799,20 @@ useEffect(() => {
   rent_closing_cost,
 ]);
 
+useEffect(() => {
+  if (yearlyRentCosts.length > 0 && yearlyBuyCosts.length > 0) {
+    const intersection = getIntersection(yearlyRentCosts, yearlyBuyCosts);
+    setIntersectionPoint(intersection);
+  }
+}, [yearlyRentCosts, yearlyBuyCosts]);
+
+useEffect(() => {
+  if (intersectionPoint) {
+    setChartRenderKey(prev => prev + 1);
+  }
+}, [intersectionPoint]);
+
+
   return (
     <>
     <Header/>
@@ -840,7 +856,7 @@ useEffect(() => {
             }}
           >
             <Line
-              key={saturationYear}
+              key={chartRenderKey}
               data={data}
               options={options}
               plugins={[intersectionPlugin, options.plugins.customTitle]}
@@ -1842,3 +1858,5 @@ sx={{  fontSize:{xs:"12px", md:"16px",color:"#000"} }}
 };
 
 export default Calculator;
+
+
