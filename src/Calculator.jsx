@@ -29,7 +29,7 @@ import {
 } from "chart.js";
 import CustomSlider from "./Components/CustomSlider";
 import { MdOutlineExpandLess, MdOutlineExpandMore } from "react-icons/md";
-import { rentvsbuy } from "./Api/calculatorApi";
+// import { rentvsbuy } from "./Api/calculatorApi";
 import Header from "./Components/Header";
 import "./assets/css/App.css"
 import Footer from "./Components/Footer";
@@ -75,7 +75,7 @@ const Calculator = () => {
   const [shifting_cost, setShiftingCost] = useState(1);
   const [STCG, setSTCG] = useState(20);
   const [saturationYear, setSaturationYear] = useState(1);
-  const [loan_ratio, setLoanRatio] = useState(65);
+  const [loan_ratio, setLoanRatio] = useState(75);
   const [yearlyBuyCosts, setYearlyBuyCosts] = useState([]);
 const [yearlyRentCosts, setYearlyRentCosts] = useState([]);
 
@@ -174,65 +174,65 @@ const [yearlyRentCosts, setYearlyRentCosts] = useState([]);
     setOpenModal(false);
   };
 
-  const handleRentApi = async () => {
-    try {
-      setError(null);
-      setLoading(true);
+//   const handleRentApi = async () => {
+//     try {
+//       setError(null);
+//       setLoading(true);
 
-      // Convert house_cost from crores to actual value (1 crore = 10,000,000)
-      const actualHouseCost = house_cost * 10000000;
+//       // Convert house_cost from crores to actual value (1 crore = 10,000,000)
+//       const actualHouseCost = house_cost * 10000000;
 
-      // Convert monthly_rent from thousands to actual value
-      const actualMonthlyRent = monthly_rent * 1000; // Convert to rupees
+//       // Convert monthly_rent from thousands to actual value
+//       const actualMonthlyRent = monthly_rent * 1000; // Convert to rupees
 
-      let loan_ratio = 100 - down_payment;
-      let LTCG = 12.5;
+//       let loan_ratio = 100 - down_payment;
+//       let LTCG = 12.5;
 
 
-      const response = await rentvsbuy(
-        tax_Bracket,
-        reinvestment,
-        property_inflation,
-        opportunity_cost_interest,
-        buy_closing_cost,
-        maintenance_cost,
-        home_insurance,
-        rent_inflation,
-        security_deposit,
-        rent_closing_cost,
-        average_shifting_home,
-        shifting_cost,
-        actualHouseCost, // Send converted house cost
-        actualMonthlyRent, // Send converted monthly rent
-        loan_tenure,
-        loan_ratio,
-        loan_rate,
-        STCG,
-        LTCG,
-        down_payment
-      );
+//       const response = await rentvsbuy(
+//         tax_Bracket,
+//         reinvestment,
+//         property_inflation,
+//         opportunity_cost_interest,
+//         buy_closing_cost,
+//         maintenance_cost,
+//         home_insurance,
+//         rent_inflation,
+//         security_deposit,
+//         rent_closing_cost,
+//         average_shifting_home,
+//         shifting_cost,
+//         actualHouseCost, // Send converted house cost
+//         actualMonthlyRent, // Send converted monthly rent
+//         loan_tenure,
+//         loan_ratio,
+//         loan_rate,
+//         STCG,
+//         LTCG,
+//         down_payment
+//       );
 
       
-  const rentArr = yearly.cumulativeRentCosts;
-  const buyArr = yearly.cumulativeBuyCosts;
-  let saturation = buyArr.length - 1;
-  for (let i = 0; i < rentArr.length; i++) {
-    const diff = rentArr[i] - buyArr[i];
-    if (diff < 0) {
-      saturation = i+1;
-      break;
-    }
-  }
-  setSaturationYear(saturation);
-setRentArray([0, ...response.cumulative_array]);
-      setBuyArray([0, ...response.rent_comulative_array]);
+//   const rentArr = yearly.cumulativeRentCosts;
+//   const buyArr = yearly.cumulativeBuyCosts;
+//   let saturation = buyArr.length - 1;
+//   for (let i = 0; i < rentArr.length; i++) {
+//     const diff = rentArr[i] - buyArr[i];
+//     if (diff < 0) {
+//       saturation = i+1;
+//       break;
+//     }
+//   }
+//   setSaturationYear(saturation);
+// setRentArray([0, ...response.cumulative_array]);
+//       setBuyArray([0, ...response.rent_comulative_array]);
       
-    } catch (error) {
-      setError("An error occurred. Please try again.");
-    } finally {
-      setLoading(false); // Set loading to false after the API call is done
-    }
-  };
+//     } catch (error) {
+//       setError("An error occurred. Please try again.");
+//     } finally {
+//       setLoading(false); // Set loading to false after the API call is done
+//     }
+//   };
 const rentData = rentArray;
     const buyData = buyArray;
 
@@ -335,7 +335,7 @@ if (!CanvasRenderingContext2D.prototype.roundRect) {
 const intersectionPlugin = {
   id: "intersectionCircle",
   afterDatasetsDraw(chart) {
-    const { ctx, scales } = chart;
+    const { ctx, scales, width: canvasWidth, height: canvasHeight } = chart;
     const isMobile = window.innerWidth < 600;
 
     if (
@@ -348,7 +348,6 @@ const intersectionPlugin = {
       return;
     }
 
-    // ⛔️ Skip annotation if intersection is too early to be meaningful
     if (intersectionPoint.x < 1.5) {
       return;
     }
@@ -364,14 +363,14 @@ const intersectionPlugin = {
     ctx.fill();
     ctx.restore();
 
-    // === Draw annotation box above intersection ===
+    // === Draw annotation box above or below intersection ===
     const fontSize = isMobile ? 10 : 14;
     const padding = isMobile ? 8 : 14;
     const lineHeight = fontSize + 4;
     const textLines = [
       "If you wish to stay in",
       "this house for more",
-      `than ${Math.round(intersectionPoint.x)} years,`,
+      `than ${saturationYear} years,`,
       "Buying is more profitable.",
     ];
 
@@ -380,8 +379,13 @@ const intersectionPlugin = {
     const maxWidth = Math.max(...textWidths);
     const boxWidth = maxWidth + padding * 2;
     const boxHeight = lineHeight * textLines.length + padding * 2;
-    const boxX = xCoord - boxWidth / 2;
-    const boxY = yCoord - boxHeight - 20;
+
+    // Clamp boxX to keep it within the canvas
+    let boxX = Math.max(0, Math.min(xCoord - boxWidth / 2, canvasWidth - boxWidth));
+
+    // Try to position box above the intersection, flip below if it overflows
+    let boxY = yCoord - boxHeight - 20;
+    if (boxY < 10) boxY = yCoord + 20;
 
     // Draw rounded annotation box
     ctx.save();
@@ -403,13 +407,17 @@ const intersectionPlugin = {
     ctx.textBaseline = "top";
 
     let textY = boxY + padding;
+    const textCenterX = boxX + boxWidth / 2;
+
     textLines.forEach((line) => {
-      ctx.fillText(line, xCoord, textY);
+      ctx.fillText(line, textCenterX, textY);
       textY += lineHeight;
     });
+
     ctx.restore();
   },
 };
+
 
 
   const data = {
@@ -446,6 +454,12 @@ const intersectionPlugin = {
       return num;
     }
   };
+  const maxYValue = Math.max(
+  ...yearlyRentCosts,
+  ...yearlyBuyCosts
+);
+
+const yAxisMax = Math.ceil(maxYValue / 1e6) * 1e6;
 
   const options = {
     responsive: true,
@@ -472,26 +486,27 @@ const intersectionPlugin = {
           },
         },
       },
-      y: {
-        min: 0,
-        max: house_cost <= 3 ? house_cost * 1.0e7 : 3.0e7,
-        ticks: {
-          stepSize: house_cost <= 3 ? 0.25e7 : 0.5e7,
-          callback: (value) => formatNumber(value),
-          precision: 0,
-          font: {
-            size: window.innerWidth < 600 ? 10 : 12,
-          },
-        },
-        grid: {
-          display: false,
-        },
-        border: {
-          color: "#000", // Add y-axis line color
-          width: 0, // Set y-axis line width
-          display: true, // Show y-axis line
-        },
-      },
+     y: {
+  min: 0,
+  max: Math.ceil(Math.max(...yearlyBuyCosts, ...yearlyRentCosts) / 1e6) * 1e6, // Rounded up to next million
+  ticks: {
+    stepSize: Math.ceil(Math.max(...yearlyBuyCosts, ...yearlyRentCosts) / 5 / 1e6) * 1e6, // 5 intervals
+    callback: (value) => formatNumber(value),
+    precision: 0,
+    font: {
+      size: window.innerWidth < 600 ? 10 : 12,
+    },
+  },
+  grid: {
+    display: false,
+  },
+  border: {
+    color: "#000",
+    width: 0,
+    display: true,
+  },
+}
+,
     },
     plugins: {
       legend: {
