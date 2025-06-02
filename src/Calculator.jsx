@@ -47,14 +47,15 @@ ChartJS.register(
   
   Legend
 );
-
 const generateYearLabels = (years) => {
   const arr = [];
   for (let i = 1; i <= years; i++) {
-    arr.push(i); // Add years from 0 to 10
+    arr.push(`Year ${i}`);
   }
   return arr;
 };
+
+
 
 const Calculator = () => {
     const isDesktop = useMediaQuery("(min-width:1200px)");
@@ -472,28 +473,31 @@ const yAxisMax = Math.ceil(maxYValue / 1e6) * 1e6;
       },
     },
     scales: {
-      x: {
-        grid: {
-          display: false,
-        },
-        border: {
-          display: false,
-        },
-        ticks: {
-          callback: function (value) {
-            return value === 0 ? "" : value;
-          },
-          font: {
-            size: window.innerWidth < 600 ? 10 : 12,
-          },
-        },
-      },
-     y: {
-  min: 0,
-  max: Math.ceil(Math.max(...yearlyBuyCosts, ...yearlyRentCosts) / 1e6) * 1e6, // Rounded up to next million
+ x: {
+  grid: {
+    display: false,
+  },
+  border: {
+    display: false,
+  },
   ticks: {
-    stepSize: Math.ceil(Math.max(...yearlyBuyCosts, ...yearlyRentCosts) / 5 / 1e6) * 1e6, // 5 intervals
-    callback: (value) => formatNumber(value),
+    callback: function (value) {
+      const label = this.getLabelForValue(value);
+      return label === "Year 0" || !label ? "" : label;
+    },
+    font: {
+      size: window.innerWidth < 600 ? 10 : 12,
+    },
+  },
+},
+
+
+ y: {
+  min: 0,
+  max: Math.ceil(Math.max(...yearlyBuyCosts, ...yearlyRentCosts) / 1e6) * 1e6, // Still 1.4 crore
+  ticks: {
+    stepSize: 24 * 1e5, // Adjusted to 24 lakh for 6 intervals (140 lakh / 6 ≈ 23.33, rounded to 24)
+    callback: (value) => value === 0 ? "" : formatNumber(value),
     precision: 0,
     font: {
       size: window.innerWidth < 600 ? 10 : 12,
