@@ -75,7 +75,7 @@ const Calculator = () => {
   const [average_shifting_home, setAverageShifting] = useState(3);
   const [shifting_cost, setShiftingCost] = useState(1);
   const [STCG, setSTCG] = useState(20);
-  const [saturationYear, setSaturationYear] = useState(1);
+  const [saturationYear, setSaturationYear] = useState(-1);
   const [loan_ratio, setLoanRatio] = useState(75);
   const [yearlyBuyCosts, setYearlyBuyCosts] = useState([]);
 const [yearlyRentCosts, setYearlyRentCosts] = useState([]);
@@ -340,41 +340,62 @@ const intersectionPlugin = {
     const { ctx, scales, width: canvasWidth, height: canvasHeight } = chart;
     const isMobile = window.innerWidth < 600;
 
-    if (
+    // Debug log
+    console.log("intersectionPoint:", intersectionPoint);
+    console.log("saturationYear:", saturationYear);
+    console.log("yearlyRentCosts length:", yearlyRentCosts?.length);
+    console.log("yearlyBuyCosts length:", yearlyBuyCosts?.length);
+
+    const noValidIntersection =
       !intersectionPoint ||
+      saturationYear > 20 ||
       !Array.isArray(yearlyRentCosts) ||
       !Array.isArray(yearlyBuyCosts) ||
       yearlyRentCosts.length < 2 ||
-      yearlyBuyCosts.length < 2
-    ) {
-      return;
+      yearlyBuyCosts.length < 2;
+
+    const drawCircle = intersectionPoint && intersectionPoint.x >= 1.5 && !noValidIntersection;
+
+    let xCoord, yCoord;
+
+    if (drawCircle) {
+      xCoord = scales.x.getPixelForValue(intersectionPoint.x);
+      yCoord = scales.y.getPixelForValue(intersectionPoint.y);
+    } else {
+      // fallback position for annotation box if no intersection point
+      xCoord = canvasWidth / 2;
+      yCoord = canvasHeight - (isMobile ? 80 : 100);
     }
 
-    if (intersectionPoint.x < 1.5) {
-      return;
+    if (drawCircle) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(Math.round(xCoord), Math.round(yCoord), isMobile ? 6 : 8, 0, 2 * Math.PI);
+      ctx.fillStyle = "#DFDFDF";
+      ctx.fill();
+      ctx.restore();
+      console.log("Circle drawn");
+    } else {
+      console.log("Circle NOT drawn");
     }
 
-    const xCoord = scales.x.getPixelForValue(intersectionPoint.x);
-    const yCoord = scales.y.getPixelForValue(intersectionPoint.y);
-
-    // === Draw inner circle at intersection ===
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(Math.round(xCoord), Math.round(yCoord), isMobile ? 6 : 8, 0, 2 * Math.PI);
-    ctx.fillStyle = "#DFDFDF";
-    ctx.fill();
-    ctx.restore();
-
-    // === Draw annotation box above or below intersection ===
     const fontSize = isMobile ? 10 : 14;
     const padding = isMobile ? 8 : 14;
     const lineHeight = fontSize + 4;
-    const textLines = [
-      "If you wish to stay in",
-      "this house for more",
-      `than ${saturationYear} years,`,
-      "Buying is more profitable.",
-    ];
+
+    const textLines = noValidIntersection
+      ? [
+          "If you wish to stay in",
+          "this house for more",
+          "than 20 years,",
+          "Buying is more profitable.",
+        ]
+      : [
+          "If you wish to stay in",
+          "this house for more",
+          `than ${saturationYear} years,`,
+          "Buying is more profitable.",
+        ];
 
     ctx.font = `bold ${fontSize}px Poppins, sans-serif`;
     const textWidths = textLines.map(line => ctx.measureText(line).width);
@@ -382,14 +403,11 @@ const intersectionPlugin = {
     const boxWidth = maxWidth + padding * 2;
     const boxHeight = lineHeight * textLines.length + padding * 2;
 
-    // Clamp boxX to keep it within the canvas
     let boxX = Math.max(0, Math.min(xCoord - boxWidth / 2, canvasWidth - boxWidth));
 
-    // Try to position box above the intersection, flip below if it overflows
     let boxY = yCoord - boxHeight - 20;
     if (boxY < 10) boxY = yCoord + 20;
 
-    // Draw rounded annotation box
     ctx.save();
     ctx.beginPath();
     ctx.roundRect(boxX, boxY, boxWidth, boxHeight, 14);
@@ -401,7 +419,6 @@ const intersectionPlugin = {
     ctx.fill();
     ctx.restore();
 
-    // Draw annotation text
     ctx.save();
     ctx.fillStyle = "#000000";
     ctx.font = `bold ${fontSize}px Poppins, sans-serif`;
@@ -417,35 +434,45 @@ const intersectionPlugin = {
     });
 
     ctx.restore();
+
+    console.log("Annotation drawn with text:", textLines);
   },
 };
 
 
 
-  const data = {
-    labels: generateYearLabels(loan_tenure),
-    datasets: [
-      {
-        data: yearlyRentCosts,
-        borderColor: "#f5a623",
-        backgroundColor: "rgba(245, 166, 35, 0.2)",
-        fill: true,
-        tension: 0.4,
-        pointRadius: 0,
-        label: "Renting",
-      },
-      {
-        data: yearlyBuyCosts,
-        borderColor: "#00a0df",
-        backgroundColor: "rgba(0, 160, 223, 0.2)",
-        fill: true,
-        tension: 0.4,
-        pointRadius: 0,
-        label: "Buying",
-      },
-    ],
-  };
+const effectiveYears = saturationYear < 10
+  ? 10
+  : saturationYear < 15
+    ? 15
+    : 20;
 
+const data = {
+  labels: generateYearLabels(effectiveYears),
+  datasets: [
+    {
+      data: yearlyRentCosts.slice(0, effectiveYears),
+      borderColor: "#f5a623",
+      backgroundColor: "rgba(245, 166, 35, 0.2)",
+      fill: true,
+      tension: 0.4,
+      pointRadius: 0,
+      label: "Renting",
+    },
+    {
+      data: yearlyBuyCosts.slice(0, effectiveYears),
+      borderColor: "#00a0df",
+      backgroundColor: "rgba(0, 160, 223, 0.2)",
+      fill: true,
+      tension: 0.4,
+      pointRadius: 0,
+      label: "Buying",
+    },
+  ],
+};
+
+
+ 
  
   const formatNumber = (num) => {
     if (Math.abs(num) >= 1.0e7) {
@@ -757,7 +784,7 @@ const saveYearlyCostsToLocalStorage = () => {
   for (let i = 1; i < rentArr.length; i++) {
     if (buyArr[i] < rentArr[i]) {
       saturation = i;
-      console.log("Saturation Year:", saturation);
+     
       break;
     }
   }
@@ -773,6 +800,7 @@ const saveYearlyCostsToLocalStorage = () => {
   setYearlyBuyCosts(buyArr);
   setYearlyRentCosts(rentArr);
   setSaturationYear(saturation);
+  console.log(saturation, "saturation year");
 
   const intersection = getIntersection(rentArr, buyArr);
   setIntersectionPoint(intersection);
