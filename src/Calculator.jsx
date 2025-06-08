@@ -313,7 +313,7 @@ const getIntersection = (rentArr, buyArr) => {
   return null;
 };
 
-console.log("getIntersection", getIntersection(yearlyRentCosts, yearlyBuyCosts));
+// console.log("getIntersection", getIntersection(yearlyRentCosts, yearlyBuyCosts));
 // const intersectionPoint = useMemo(
 //   () => getIntersection(yearlyRentCosts, yearlyBuyCosts),
 //   [yearlyRentCosts, yearlyBuyCosts, yearlyCostVersion]
@@ -341,14 +341,14 @@ const intersectionPlugin = {
     const isMobile = window.innerWidth < 600;
 
     // Debug log
-    console.log("intersectionPoint:", intersectionPoint);
-    console.log("saturationYear:", saturationYear);
-    console.log("yearlyRentCosts length:", yearlyRentCosts?.length);
-    console.log("yearlyBuyCosts length:", yearlyBuyCosts?.length);
-
+    // console.log("intersectionPoint:", intersectionPoint);
+    // console.log("saturationYear:", saturationYear);
+    // console.log("yearlyRentCosts length:", yearlyRentCosts?.length);
+    // console.log("yearlyBuyCosts length:", yearlyBuyCosts?.length);
+ console.log("saturationYear updated:", saturationYear);
     const noValidIntersection =
       !intersectionPoint ||
-      saturationYear > 20 ||
+      saturationYear >= 20 ||
       !Array.isArray(yearlyRentCosts) ||
       !Array.isArray(yearlyBuyCosts) ||
       yearlyRentCosts.length < 2 ||
@@ -374,9 +374,9 @@ const intersectionPlugin = {
       ctx.fillStyle = "#DFDFDF";
       ctx.fill();
       ctx.restore();
-      console.log("Circle drawn");
+      // console.log("Circle drawn");
     } else {
-      console.log("Circle NOT drawn");
+      // console.log("Circle NOT drawn");
     }
 
     const fontSize = isMobile ? 10 : 14;
@@ -435,7 +435,7 @@ const intersectionPlugin = {
 
     ctx.restore();
 
-    console.log("Annotation drawn with text:", textLines);
+    // console.log("Annotation drawn with text:", textLines);
   },
 };
 
@@ -483,12 +483,22 @@ const data = {
       return num;
     }
   };
-  const maxYValue = Math.max(
-  ...yearlyRentCosts,
-  ...yearlyBuyCosts
-);
+ const allYValues = [...yearlyRentCosts, ...yearlyBuyCosts];
+const maxYValue = Math.max(...allYValues);
+const minYValue = Math.min(...allYValues);
+const yPadding = (maxYValue - minYValue) * 0.1;
 
-const yAxisMax = Math.ceil(maxYValue / 1e6) * 1e6;
+const roughMax = maxYValue + yPadding;
+const roundedMax = Math.ceil(roughMax / 5e6) * 5e6;
+const yAxisMax = Math.min(roundedMax, maxYValue * 1.2);  // Soft cap at 120% of max
+
+const yAxisMin = Math.max(0, Math.floor((minYValue - yPadding) / 5e6) * 5e6);
+
+// 5 or 6 ticks max
+const approxStep = Math.ceil((yAxisMax - yAxisMin) / 6 / 1e5) * 1e5;
+
+
+
 
   const options = {
   devicePixelRatio: window.devicePixelRatio || 2,
@@ -519,13 +529,12 @@ const yAxisMax = Math.ceil(maxYValue / 1e6) * 1e6;
 },
 
 
- y: {
-  min: 0,
-  max: Math.ceil(Math.max(...yearlyBuyCosts, ...yearlyRentCosts) / 1e6) * 1e6, // Still 1.4 crore
+y: {
+  min: yAxisMin,
+  max: yAxisMax,
   ticks: {
-    stepSize: 24 * 1e5, // Adjusted to 24 lakh for 6 intervals (140 lakh / 6 ≈ 23.33, rounded to 24)
+    stepSize: approxStep,
     callback: (value) => value === 0 ? "" : formatNumber(value),
-    precision: 0,
     font: {
       size: window.innerWidth < 600 ? 10 : 12,
     },
@@ -539,6 +548,8 @@ const yAxisMax = Math.ceil(maxYValue / 1e6) * 1e6;
     display: true,
   },
 }
+
+
 ,
     },
     plugins: {
@@ -598,7 +609,7 @@ const calculateYearlyCosts = ({
   opportunity_cost_interest,
   tax_Bracket,
 }) => {
-  const years = loan_tenure;
+  const years = 20;
   const propertyBase = house_cost * 1e7;
   const oppCostRate = opportunity_cost_interest / 100;
   const taxRate = tax_Bracket / 100;
@@ -616,13 +627,13 @@ const calculateYearlyCosts = ({
     const emi = Math.abs(monthlyPayment * 12); // Annual EMI
    
   
-  const emiArr = Array(years).fill(emi);
+  const emiArr = Array(20).fill(emi);
 
 
   const principalRepaidArr = [];
 let balance = loanAmount;
 
-for (let year = 1; year <= years; year++) {
+for (let year = 1; year <= 20; year++) {
   let principalRepaidThisYear = 0;
 
   for (let month = 1; month <= 12; month++) {
@@ -645,7 +656,7 @@ for (let year = 1; year <= years; year++) {
   const houseValueArr = [propertyBase];
   const capitalGainsArr = [0];
    const oppCostOnSD_DP = [0];
-  for(let i=1; i<loan_tenure;i++){
+  for(let i=1; i<=20;i++){
     const x= houseValueArr[i-1] * (property_inflation / 100);
     capitalGainsArr.push(x);
     oppCostOnSD_DP .push(x);
@@ -696,7 +707,7 @@ cumulativeBuy +=netBuy;
    
 cumulativeNetBuyArr.push(cumulativeBuy);
 
-  for (let year = 2; year <= years; year++) {
+  for (let year = 2; year <= 20; year++) {
     rent =rent *(1 + rent_inflation/100);
     cumulativeRentPaid +=rent;
 
@@ -780,14 +791,20 @@ const saveYearlyCostsToLocalStorage = () => {
   localStorage.setItem("buyingCosts", JSON.stringify(buyArr));
   localStorage.setItem("rentingCosts", JSON.stringify(rentArr));
 
-  let saturation = buyArr.length - 1;
-  for (let i = 1; i < rentArr.length; i++) {
-    if (buyArr[i] < rentArr[i]) {
-      saturation = i;
-     
-      break;
-    }
+let saturation = buyArr.length;
+for (let i = 0; i < rentArr.length; i++) {
+  if (buyArr[i] < rentArr[i]) {
+    saturation = i;
+    break;
   }
+}
+if (saturation === buyArr.length) {
+  saturation = 20; // Explicitly set to 20 if never found
+}
+setSaturationYear(prev => {
+  if (prev !== saturation) return saturation;
+  return prev;
+});
 
   // ✅ NEW: Calculate and log difference array (Buy - Rent)
   const differenceArray = buyArr.map((buyCost, index) => {
@@ -799,11 +816,15 @@ const saveYearlyCostsToLocalStorage = () => {
   // Update state
   setYearlyBuyCosts(buyArr);
   setYearlyRentCosts(rentArr);
-  setSaturationYear(saturation);
-  console.log(saturation, "saturation year");
 
+  console.log(saturation, "saturation year");
+ 
   const intersection = getIntersection(rentArr, buyArr);
-  setIntersectionPoint(intersection);
+ if (saturation === 20) {
+  setIntersectionPoint(null);
+} else {
+  setIntersectionPoint(getIntersection(rentArr, buyArr));
+}
 
   setYearlyCostVersion(prev => prev + 1); // Trigger re-render if needed
 };
@@ -839,9 +860,7 @@ useEffect(() => {
 }, [yearlyRentCosts, yearlyBuyCosts]);
 
 useEffect(() => {
-  if (intersectionPoint) {
-    setChartRenderKey(prev => prev + 1);
-  }
+   setChartRenderKey(prev => prev + 1);
 }, [intersectionPoint]);
 
 
