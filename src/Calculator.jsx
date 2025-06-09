@@ -176,7 +176,7 @@ const [chartRenderKey, setChartRenderKey] = useState(0);
     setOpenModal(false);
   };
 
-//   const handleRentApi = async () => {
+
 //     try {
 //       setError(null);
 //       setLoading(true);
@@ -245,7 +245,7 @@ const rentData = rentArray;
      
     })
 
-//   for (let i = 1; i < rentArr.length; i++) {
+// function to calculate intersection point of two lines
 //     const prevDiff = rentArr[i - 1] - buyArr[i - 1];
 //     const currentDiff = rentArr[i] - buyArr[i];
 
@@ -313,13 +313,9 @@ const getIntersection = (rentArr, buyArr) => {
   return null;
 };
 
-// console.log("getIntersection", getIntersection(yearlyRentCosts, yearlyBuyCosts));
-// const intersectionPoint = useMemo(
-//   () => getIntersection(yearlyRentCosts, yearlyBuyCosts),
-//   [yearlyRentCosts, yearlyBuyCosts, yearlyCostVersion]
-// );
 
- // Optional: Add polyfill for roundRect if not supported
+
+ 
 if (!CanvasRenderingContext2D.prototype.roundRect) {
   CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
     if (w < 2 * r) r = w / 2;
@@ -483,9 +479,15 @@ const data = {
       return num;
     }
   };
- const allYValues = [...yearlyRentCosts, ...yearlyBuyCosts];
+  // Calculate the maximum and minimum Y values for the chart
+const allYValues = [
+  ...yearlyRentCosts.slice(0, effectiveYears),
+  ...yearlyBuyCosts.slice(0, effectiveYears),
+];
 const maxYValue = Math.max(...allYValues);
 const minYValue = Math.min(...allYValues);
+console.log("maxYValue", maxYValue);
+console.log("minYValue", minYValue);
 const yPadding = (maxYValue - minYValue) * 0.1;
 
 const roughMax = maxYValue + yPadding;
@@ -498,7 +500,7 @@ const yAxisMin = Math.max(0, Math.floor((minYValue - yPadding) / 5e6) * 5e6);
 const approxStep = Math.ceil((yAxisMax - yAxisMin) / 6 / 1e5) * 1e5;
 
 
-
+//  Chart.js options
 
   const options = {
   devicePixelRatio: window.devicePixelRatio || 2,
@@ -547,6 +549,7 @@ y: {
     width: 0,
     display: true,
   },
+  maxTicksLimit: 5, // Limit to 5 or 6 ticks max
 }
 
 
