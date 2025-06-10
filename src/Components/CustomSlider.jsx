@@ -10,7 +10,7 @@ const CustomSlider = ({
   max = 100,
   step = 1,
   valueLabelFormat = (value) => value,
-  trackColor = "#0086AD",
+  trackColor = "#0086AE",
   railColor = "#99BCC5",
   thumbColor = "#0086AD",
   valueLabelColor = "#DCF7FF",

@@ -49,8 +49,9 @@ ChartJS.register(
 );
 const generateYearLabels = (years) => {
   const arr = [];
-  for (let i = 1; i <= years; i++) {
-    arr.push(`Year ${i}`);
+  const currentYear = new Date().getFullYear(); // Get the current year
+  for (let i = 0; i < years; i++) {
+    arr.push(`${currentYear + i}`); // Add each year starting from the current year
   }
   return arr;
 };
@@ -470,15 +471,10 @@ const data = {
 
  
  
-  const formatNumber = (num) => {
-    if (Math.abs(num) >= 1.0e7) {
-      return (num / 1.0e7).toFixed(1) + " Cr"; // Format as Crore
-    } else if (Math.abs(num) >= 1.0e5) {
-      return (num / 1.0e5).toFixed(1) + " L"; // Format as Lakh
-    } else {
-      return num;
-    }
-  };
+const formatNumber = (num) => {
+  return (num / 1.0e7).toFixed(1) + " Cr";  // Always show in Cr with 1 decimal
+};
+
   // Calculate the maximum and minimum Y values for the chart
 const allYValues = [
   ...yearlyRentCosts.slice(0, effectiveYears),
