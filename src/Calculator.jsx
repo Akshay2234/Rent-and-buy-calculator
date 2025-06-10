@@ -1009,6 +1009,10 @@ useEffect(() => {
         <Grid item xs={12} md={4} className="mobile-screen-container" sx={{
     border: { xs: "none", md: "1px solid black" },
     borderRadius: { xs: "none", md: "25px" },
+    position:{xs:"none",md:"absolute"},
+    right: "8%",
+    width: "28%",
+    top: "35%",
     paddingRight: { md: "24px" },
     // marginTop: { md: "24px" },
     padding:"22px",
@@ -1666,7 +1670,7 @@ useEffect(() => {
       </Grid>
 
       <Grid container>
-        <Grid item xs={12} md={8}>
+        <Grid item xs={12} md={8} marginTop={"8%"}>
                     {/* Text Below the Chart */}
           <Box sx={{ display: { xs: "block", md: "block",textAlign:'left'}, mt: 1, mr: 1,ml:1 }}>
             <Typography variant="h6" mb={2} textAlign={"left"} sx={{  fontSize:{xs:"14px", md:"20px",color:"#000"} }}>

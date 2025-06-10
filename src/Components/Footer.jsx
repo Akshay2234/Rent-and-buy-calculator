@@ -60,7 +60,7 @@ const Footer = () => {
                     <ul>
                       <li><a href="https://www.prehome.in/">Home</a></li>
                       <li><a href="https://www.prehome.in/ourstory">Our Story</a></li>
-                      <li><a href="https://www.prehome.in/blogs">Blogs</a></li>
+                      <li><a href="https://www.prehome.in/blog">Blog</a></li>
                       <li><a href="https://www.prehome.in/contactus">Contact us</a></li>
                     </ul>
                   </div>

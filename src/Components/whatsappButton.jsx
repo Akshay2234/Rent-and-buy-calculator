@@ -1,27 +1,23 @@
-import React  from "react";
-// import "./StepIndicator.css";
-import  { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 
 const WhatsAppButton = () => {
-  const phoneNumber = ""; // Replace with your WhatsApp number
-  const message = ""; // Optional prefilled message
-  const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+  const phoneNumber = "918800658299"; // WhatsApp number in international format without "+" or spaces
+  const message = "Thank you for contacting Prehome. How can we help you today?";
+const whatsappUrl = `https://api.whatsapp.com/send?phone=${phoneNumber}&text=${encodeURIComponent(message)}`;
 
-   const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
-   useEffect(() => {
+  useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth <= 768);
     checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-
-
-  const styles = {
+   const styles = {
     floatingButton: {
       position: "fixed",
-      bottom: isMobile ? "35px" : "30px",
+      bottom: isMobile ? "10px" : "30px",
       right: isMobile ? "10px" : "40px",
       padding: isMobile ? "10px 10px" : "10px 23px",
       backgroundColor: "#4dc247",
@@ -51,11 +47,10 @@ const WhatsAppButton = () => {
           alt="WhatsApp"
           style={styles.icon}
         />
-        {!isMobile && <span className="desk-text"> chat with us</span>}
+        {!isMobile && <span className="desk-text"> Chat with us</span>}
       </div>
     </a>
   );
 };
 
 export default WhatsAppButton;
-
